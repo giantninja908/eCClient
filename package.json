@@ -1,0 +1,23 @@
+{
+  "name": "GiantClient",
+  "version": "1.0.1",
+  "description": "Krunker CClient rewritten with Electron",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "package-mac": "electron-packager . --overwrite --platform=darwin --arch=x64 --icon=assets/icon/icon.icns --prune=true --out=release-builds",
+	"package-win": "electron-packager . GiantClient --overwrite --asar=true --platform=win32 --arch=ia32 --icon=assets/icon/icon.ico --prune=true --out=release-builds --version-string.CompanyName=GNU/ninja --version-string.FileDescription=1.0.0 --version-string.ProductName=\"Giant Client\"",    
+	"package-linux": "electron-packager . GiantClient --overwrite --asar=true --platform=linux --arch=x64 --icon=assets/icon/icon.png --prune=true --out=release-builds"
+  },
+  "author": "Cuffuffles / GNU/Ninja",
+  "devDependencies": {
+    "electron": "^6.1.6"
+  },
+  "dependencies": {
+    "discord-rpc": "^3.1.0",
+    "electron-localshortcut": "^3.2.1",
+    "follow-redirects": "^1.9.0",
+    "semver": "^6.3.0"
+  }
+  
+}
