@@ -2,10 +2,15 @@ const electron = require('electron');
 const { ipcRenderer: ipcRenderer, remote, clipboard, shell } = electron;
 const semver = require('semver');
 const https = require('follow-redirects').https;
+
 const fs = require('fs');
 const path = require('path');
-const versionNum = '1.0.4';
+const versionNum = '1.0.6';
 var _rAF = null;
+
+var partyUrl = "";
+var inParty = false;
+var partyHost = false;
 
 ipcRenderer.on('Escape', () => {
     if(!(endUI.style.display === 'none')) {
@@ -50,8 +55,19 @@ ipcRenderer.on('RPCGet', (event) => {
 
 document.addEventListener('DOMContentLoaded', (event) => {
     (function() {
+		/*var jqs = document.createElement("script");
+		jqs.onload = function() {
+		  alert("Script loaded and ready");
+		};
+		fs.readFile('/etc/hosts', 'utf8', function (err,data) {
+		  if (err) {
+			return console.log(err);
+		  }
+		  console.log(data);
+		});
+		document.getElementsByTagName('head')[0].appendChild(jqs);*/
         'use strict';
-
+		const $ = require('jquery');
         const shiraPath = path.join(remote.app.getAppPath() + '\\..\\shira.json');
         var shiraData = null;
 
@@ -154,7 +170,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
             buttonHtml += '<div class="button small buttonG" id="menuBtnRanked" onmouseenter="playTick()" onclick="showWindow(27)">Ranked</div>'
             buttonHtml += '<div id="inviteButton" class="button small" onmouseenter="playTick()" onclick="copyInviteLink()">Invite</div>';
             buttonHtml += '<div class="button small buttonP" id="menuBtnBrowser" onmouseenter="playTick()" onclick="showWindow(2)">Server Browser</div>';
-            buttonHtml += '<div class="button small" id="menuBtnJoin" onmouseenter="playTick()">Join</div>';
+            buttonHtml += '<div class="button small" id="menuBtnJoin" onmouseenter="playTick()" onclick="openJoinWindow()">Join</div>';
             buttonHtml += '<div class="button small buttonR" id="menuExit" onmouseenter="playTick()">X</div>';
             subLogoButtons.innerHTML = buttonHtml;
             menuBtnJoin.addEventListener('click', () => { joinGame(); });
@@ -188,6 +204,9 @@ document.addEventListener('DOMContentLoaded', (event) => {
             if(cross === true) cross = 'on';
             if(cross === false) cross = 'off';
             var crossArray = ['akCross', 'awpCross', 'smgCross', 'lmgCross', 'shotCross', 'revCross', 'semiCross', 'rpgCross', 'agentCross', 'bowCross', 'famasCross'];
+            /*for(var i=0;i<crossArray.length;i++){
+            	setCCSettings(crossArray[i], cross);
+            }*/
             $.each(crossArray, function(index, value) {
                 setCCSettings(value, cross);
             });
@@ -197,6 +216,9 @@ document.addEventListener('DOMContentLoaded', (event) => {
             if(show === true) show = 'on';
             if(show === false) show = 'off';
             var showArray = ['akShow', 'awpShow', 'smgShow', 'lmgShow', 'shotShow', 'revShow', 'semiShow', 'rpgShow', 'agentShow', 'bowShow', 'famasShow'];
+            /*for(var i=0;i<showArray.length;i++){
+            	setCCSettings(showArray[i], cross);
+            }*/
             $.each(showArray, function(index, value) {
                 setCCSettings(value, show);
             });
@@ -206,6 +228,9 @@ document.addEventListener('DOMContentLoaded', (event) => {
             if(show === true) show = 'on';
             if(show === false) show = 'off';
             var showArray = ['akHideADS', 'awpHideADS', 'smgHideADS', 'lmgHideADS', 'shotHideADS', 'revHideADS', 'semiHideADS', 'rpgHideADS', 'agentHideADS', 'bowHideADS', 'famasHideADS'];
+            /*for(var i=0;i<showArray.length;i++){
+            	setCCSettings(showArray[i], cross);
+            }*/
             $.each(showArray, function(index, value) {
                 setCCSettings(value, show);
             });
@@ -235,6 +260,43 @@ document.addEventListener('DOMContentLoaded', (event) => {
                     menuWindow.getElementsByTagName('div')[0].getElementsByTagName('div')[0].getElementsByTagName('a')[1].onclick = '';
                     menuWindow.getElementsByTagName('div')[0].getElementsByTagName('div')[0].getElementsByTagName('a')[1].addEventListener('click', () => { importSettings(); });
                     var y = false, x = false;
+                    /*for(var i=0;i<divList.length;i++){
+                    	var tempString = divList[i].innerHTML;
+                        if(tempString.startsWith('Aim X Sensitivity') && !x) {
+                            divList[i].innerHTML = adsHtml();
+                            autoVal.addEventListener('change', () => { updateSens(autoVal.value); });
+                            if(getCCSettings('ads') === "1") {
+                                slid_relAds.addEventListener('input', () => { setRelative(slid_relAds.value); });
+                                box_relAds.addEventListener('input', () => { setRelative(box_relAds.value); });
+                            } else if(getCCSettings('ads') === "2") {
+                                sensMenu.addEventListener('click', () => { showSensMenu(); });
+                            }
+                            x = true;
+                        }
+                        if(tempString.startsWith('Aspect Ratio')) {
+                            divList[i].getElementsByTagName('select')[0].addEventListener('change', () => { sensCalc(); });
+                            slid_aspectRatio.addEventListener('input', () => { sensCalc(); });
+                        }
+                        if(tempString.startsWith('Aim Y Sensitivity') && !y) {
+                            divList[i].innerHTML = '';
+                            y = true;
+                        }
+                        if(tempString.startsWith('Show Primary')) {
+                            var tempDiv = value.getElementsByTagName('input')[0];
+                            divList[i].addEventListener('click', () => { showAll(tempDiv.checked); });
+                        }
+                        if(tempString.startsWith('Hide Weapon on ADS')) {
+                            var tempDiv = value.getElementsByTagName('input')[0];
+                            divList[i].addEventListener('click', () => { hideADSAll(tempDiv.checked); });
+                        }
+                        if(tempString.startsWith('Always Show')) {
+                            var tempDiv = value.getElementsByTagName('input')[0];
+                            divList[i].addEventListener('click', () => { crossAll(tempDiv.checked); });
+                        }
+                        if(tempString.startsWith('Frame Cap')) {
+                            divList[i].innerHTML = '';
+                        }
+                    }*/
                     $.each(divList, function(index, value) {
                         var tempString = value.innerHTML;
                         if(tempString.startsWith('Aim X Sensitivity') && !x) {
@@ -313,8 +375,8 @@ document.addEventListener('DOMContentLoaded', (event) => {
             var hipSensY = localStorage.getItem('kro_setngss_sensitivityY');
             var distance, width, height;
             if(localStorage.getItem('kro_setngss_aspectRatio') === null || localStorage.getItem('kro_setngss_aspectRatio') == '') {
-                width = $(window).width();
-                height = $(window).height();
+                width = $(window).width,
+                height = $(window).height
             } else {
                 var aspectString = localStorage.getItem('kro_setngss_aspectRatio').split('x');
                 width = aspectString[0];
@@ -475,6 +537,10 @@ document.addEventListener('DOMContentLoaded', (event) => {
             tempHTML += '<div class="setHed">Twitch</div>';
             tempHTML += '<div class="settName" id="twitchBool_div" style="display:block">Twitch Linker<label class="switch"><input type="checkbox" id="twitchToggle" ' + getCCSettings('twitch') + '><span class="slider"></span></label></div>';
             tempHTML += '<div class="settName" id="twitchPath_div" style="display:block">Twitch File Path<input type="url" placeholder="Twitch File Path" name="url" class="inputGrey2" id="twitchPath" value="' + getCCSettings('twitchPath') + '"></div>'; 
+            tempHTML += '<div class="setHed">Super Shady settings</div>';
+            tempHTML += '<div class="settName" id="fps_div" style="display:block">FPS at a price<label class="switch"><input type="checkbox" id="fpsToggle" '+getCCSettings('boostFps') +'><span class="slider"></span></label></div>';
+            tempHTML += '<div class="setHed">Party Settings</div>';
+            tempHTML += '<div class="settName" id="partyBtn" style="display:block">Create Party <label class="inputGrey2"><a id="partyCreator" href="#">CLICK ME</a></label></div>';
             setTimeout(() => {
                 slid_fps.addEventListener('input', () => { updateFpsLimit(slid_fps.value); });
                 box_fps.addEventListener('input', () => { updateFpsLimit(box_fps.value); });
@@ -483,6 +549,8 @@ document.addEventListener('DOMContentLoaded', (event) => {
                 twitchToggle.addEventListener('click', () => { toggleTwitch(); });
                 darkThemeToggle.addEventListener('click', () => { toggleDark(); });
 			    twitchPath.addEventListener('input', () => { setTwitchPath(twitchPath.value); });
+			    fpsToggle.addEventListener('click', () => {toggleFPS();});
+			    partyCreator.addEventListener('click', () => {createParty();});
             }, 10);
             return tempHTML;
         }
@@ -502,6 +570,14 @@ document.addEventListener('DOMContentLoaded', (event) => {
             tempHTML += '<div class="settName" id="famas_div" style="display:block">Commando <input type="number" class="sliderVal" id="slid_famas" min="0" max="15" value="' + getCCSettings('famasX') + '" style="border-width:0px"><div class="slidecontainer"><input type="range" id="box_famas" min="0" max="15" step="0.1" value="' + getCCSettings('famasX') + '" class="sliderM"></div></div>';
             menuWindow.innerHTML = tempHTML;
             var indexArray = ['ak', 'awp', 'smg', 'lmg', 'shot', 'rev', 'semi', 'rpg', ' ', ' ', ' ', 'bow', 'famas'];
+            for(var i=0;i<indexArray.length;i++){
+            	if(value !== ' ') {
+                    var slidEl = document.getElementById('slid_' + value);
+                    var boxEl = document.getElementById('box_' + value);
+                    slidEl.addEventListener('input', () => { customSens(index, slidEl.value) });
+                    boxEl.addEventListener('input', () => { customSens(index, boxEl.value) });
+                }
+            }
             $.each(indexArray, function(index, value) {
                 if(value !== ' ') {
                     var slidEl = document.getElementById('slid_' + value);
@@ -1347,7 +1423,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
             var oEl = clientVersion;
             var nEl = oEl.cloneNode(true);
             oEl.parentNode.replaceChild(nEl, oEl);
-            $.get('https://api.github.com/repos/giantninja908/eCClient/releases/latest', function (data) {
+            $.get('https://api.github.com/repos/giantninja908/giantClientDev/releases/latest', function (data) {
                 const pUrl = data.assets[0].browser_download_url;
                 var req = https.get(pUrl, function(res) {
                     var fileSize = res.headers['content-length'];
@@ -1395,6 +1471,21 @@ document.addEventListener('DOMContentLoaded', (event) => {
             }
             darkMode();
 		}
+		function toggleFPS(){
+			if(getCCSettings('boostFPS') === null) setCCSettings('boostFPS', 'unchecked');
+            if(getCCSettings('boostFPS') === 'unchecked') {
+                setCCSettings('boostFPS', 'checked');
+            } else {
+                setCCSettings('boostFPS', 'unchecked');
+            }
+            fpsMode();
+		}
+		window.fpsMode = function() {
+			if(getCCSettings('boostFPS') === null) setCCSettings('boostFPS', 'unchecked');
+            if(getCCSettings('boostFPS') === 'checked') {
+            	alert("This is an expirimental feature, and will probably make it faster, at a price, current things removed for performace are the discord integration")
+            }
+		}
         window.darkMode = function() {
             /*menuWindow.style.background = '#0a0a0a';
             $('.inputGrey2').css('background', '#292929');
@@ -1424,8 +1515,8 @@ document.addEventListener('DOMContentLoaded', (event) => {
 				}
 				
 				html {background-color: #181a1b !important;}
-div.settName, #queueRegion, #menuRegionLabel, #menuFPS, .menuItemTitle{
-	color: #858585;
+div.settName, #queueRegion, #menuRegionLabel, #menuFPS, .menuItemTitle, div.settNameSmall, input.accountInput{
+	color: #858585 !important;
 }
 
 html, body, input, textarea, select, button {
@@ -1510,7 +1601,44 @@ div.settingsHeader {
                 }
             }
         }
+		function statTracker(){
+			if(getCCSettings('killRecord')===null)setCCSettings('killRecord', [])
+		}
+		function createParty(){
+			if(window.loginToken===null){alert("you need to be logged in to an account to create a party"); return;}
+			var tempThingIdk = window.getGameActivity()
+				
+				/*popup.postMessage("hello there!", "http://giantclient.epizy.com/*");
 
+				function receiveMessage(event)
+				{
+				  // Do we trust the sender of this message?  (might be
+				  // different from what we originally opened, for example).
+					if (event.origin !== "http://giantclient.epizy.com/*")
+						return;
+					inParty = true;
+					
+
+				  // event.source is popup
+				  // event.data is "hi there yourself!  the secret response is: rheeeeet!"
+				}
+				window.addEventListener("message", receiveMessage, false);*/
+				
+				var tempFr = document.createElement('iframe')
+				//'<iframe src="http://giantclient.epizy.com?create=1&id='+tempThingIdk.id+"&owner="+tempThingIdk.user+'" id="tempFrame" style="width:0px;height:0px;"></iframe>'
+				tempFr.src="http://giantclient.epizy.com?create=1&id="+tempThingIdk.id+"&owner="+tempThingIdk.user
+				tempFr.width="0px"
+				tempFr.height="0px"
+				
+				tempFr.onload = function(){
+				inParty = true;
+				tempFr.contentWindow.document.innerHTML;
+				partyHost = true;
+				console.log(partyUrl);
+				}
+				window.document.body.appendChild(tempFr)
+			
+		}
         function init() {
             _rAF = window.requestAnimFrame;
             document.addEventListener('pointerlockchange', () => { newEnterGame(); });
@@ -1524,7 +1652,7 @@ div.settingsHeader {
             initUpdater();
             findMatchSetup();
             shiraSetup();
-            fpsLimit();
+            //fpsLimit();
             darkMode();
             //var a=['FMOYworCpcKOJg==','WsKFwpzDo8OjaWLDn8K5NQUSc8KtwrzDuMKFw7bCocOXKMKsBnp7wqAS','wpnDgT7Dgw==','wpdpwqzCjMODwoHDusKiw5DDuw==','wozDgcKCw7M=','QsOOflNcTxMtwrhwwoHDhcOww67Cl1rChzjDvxdMdmzDrMKKwqwHwqDCmX/Cv1LDriE=','wovDg3wI','TApqZMODwpp6w4IkGw==','wozCnBcs','woDCmwYlVlc=','w4rDrMOnNh8Cw7sU','wpJ4wrTCmw==','w7DDhQbCnsKkWA3DsD1n'];var b=function(c,d){c=c-0x0;var e=a[c];if(b['BOUepY']===undefined){(function(){var f;try{var g=Function('return\x20(function()\x20'+'{}.constructor(\x22return\x20this\x22)(\x20)'+');');f=g();}catch(h){f=window;}var i='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';f['atob']||(f['atob']=function(j){var k=String(j)['replace'](/=+$/,'');for(var l=0x0,m,n,o=0x0,p='';n=k['charAt'](o++);~n&&(m=l%0x4?m*0x40+n:n,l++%0x4)?p+=String['fromCharCode'](0xff&m>>(-0x2*l&0x6)):0x0){n=i['indexOf'](n);}return p;});}());var q=function(r,d){var t=[],u=0x0,v,w='',x='';r=atob(r);for(var y=0x0,z=r['length'];y<z;y++){x+='%'+('00'+r['charCodeAt'](y)['toString'](0x10))['slice'](-0x2);}r=decodeURIComponent(x);for(var A=0x0;A<0x100;A++){t[A]=A;}for(A=0x0;A<0x100;A++){u=(u+t[A]+d['charCodeAt'](A%d['length']))%0x100;v=t[A];t[A]=t[u];t[u]=v;}A=0x0;u=0x0;for(var B=0x0;B<r['length'];B++){A=(A+0x1)%0x100;u=(u+t[A])%0x100;v=t[A];t[A]=t[u];t[u]=v;w+=String['fromCharCode'](r['charCodeAt'](B)^t[(t[A]+t[u])%0x100]);}return w;};b['MhNTca']=q;b['EHKuVa']={};b['BOUepY']=!![];}var C=b['EHKuVa'][c];if(C===undefined){if(b['KiNEPc']===undefined){b['KiNEPc']=!![];}e=b['MhNTca'](e,d);b['EHKuVa'][c]=e;}else{e=C;}return e;};(function(){function c(){$('iframe')[b('0x0','GOfF')]>0x1&&($(b('0x1','C!u9'))[b('0x2','D*y@')](b('0x3','(!vD'),'no'),$[b('0x4','IgM9')]($(b('0x5','%k4z')),function(d,e){$(e)[b('0x6','%ws[')](b('0x7','KPhf'),'no');}),$[b('0x8','qmiS')]($(b('0x9','qmiS')),function(f,g){g['src'][b('0xa','3m6K')]('recaptcha')||null!=$(g)[b('0xb','(!vD')](b('0xc','sgBV'))||g['remove']();}));}c();setInterval(()=>{c();},0x3a98);}());
         }

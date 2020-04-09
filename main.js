@@ -1,3 +1,4 @@
+//const gui = require("nw.gui");
 const electron = require('electron');
 const {app, BrowserWindow, Menu, shell, ipcMain} = electron;
 const fs = require('fs');
@@ -9,6 +10,7 @@ const mRPC = require('discord-rpc');
 const clientId = '670062286890729492';
 const clientSecret = '********************************'; //you really think I would hand it out?
 const rpc = new mRPC.Client({ transport: 'websocket' });
+
 var win = null, splash = null;
 
 app.commandLine.appendSwitch('disable-frame-rate-limit');
@@ -27,6 +29,7 @@ app.commandLine.appendSwitch('no-referrers');
 app.commandLine.appendSwitch('disable-2d-canvas-clip-aa');
 app.commandLine.appendSwitch('disable-bundled-ppapi-flash');
 app.commandLine.appendSwitch('disable-logging');
+app.commandLine.appendSwitch('disable-web-security');
 app.commandLine.appendSwitch('webrtc-max-cpu-consumption-percentage=100');
 if(os.cpus()[0].model.includes('AMD')) {
    app.commandLine.appendSwitch('enable-zero-copy');
@@ -39,13 +42,10 @@ function createGameWindow() {
     win = new BrowserWindow({
         backgroundColor: '#000000',
         show: false,
-        
         webPreferences: {
             nodeIntergration: false,
-			webSecurity: false,
             preload: path.join(__dirname, 'client.js')
-        },
-        icon: path.join(__dirname, 'assets/icon/icon.png')
+        }
     });
     win.once('ready-to-show', () => {
         win.show();
@@ -88,6 +88,29 @@ function createGameWindow() {
     shortcut.register(win, 'F11', () => {
         win.setSimpleFullScreen(!win.isSimpleFullScreen());
     });
+    shortcut.register(win, 'F7', ()=> {
+    	win.webContents.openDevTools();
+    });
+    var template = [{
+        label: "Application",
+        submenu: [
+            { label: "About Application", selector: "orderFrontStandardAboutPanel:" },
+            { type: "separator" },
+            { label: "Quit", accelerator: "Command+Q", click: function() { app.quit(); }}
+        ]}, {
+        label: "Edit",
+        submenu: [
+            { label: "Undo", accelerator: "CmdOrCtrl+Z", selector: "undo:" },
+            { label: "Redo", accelerator: "Shift+CmdOrCtrl+Z", selector: "redo:" },
+            { type: "separator" },
+            { label: "Cut", accelerator: "CmdOrCtrl+X", selector: "cut:" },
+            { label: "Copy", accelerator: "CmdOrCtrl+C", selector: "copy:" },
+            { label: "Paste", accelerator: "CmdOrCtrl+V", selector: "paste:" },
+            { label: "Select All", accelerator: "CmdOrCtrl+A", selector: "selectAll:" }
+        ]}
+    ];
+
+    Menu.setApplicationMenu(Menu.buildFromTemplate(template));
     //win.webContents.openDevTools();
     win.setSimpleFullScreen(true);
     
@@ -155,11 +178,26 @@ function createGameWindow() {
 			callback({ cancel: false, redirectURL: s.fls[details.url.replace(/https|http|(\?.*)|(#.*)/gi, '')] || details.url });
 		});
 	}
+	
+	/*const filter = {
+		urls:['*://*.giantclient.epizy.com/*']
+	};
+	const session = electron.remote.session
+	session.defaultSession.webRequest.onBeforeSendHeaders(filter, (details, callback) => {
+                details.requestHeaders['Origin'] = null;
+                details.headers['Origin'] = null;
+                callback({ requestHeaders: details.requestHeaders })
+	});*/
+	
     win.loadURL('https://krunker.io/');
     rpc.login({ clientId }).catch(console.error);
     win.webContents.on('did-finish-load', () => {
         initRPC();
     });
+    
+    
+    
+    
     twitch();
     ipcMain.on('updated', () => {
         app.relaunch();
