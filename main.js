@@ -1,17 +1,9 @@
-//const gui = require("nw.gui");
 const electron = require('electron');
 const {app, BrowserWindow, Menu, shell, ipcMain} = electron;
-const fs = require('fs');
 var os = require('os');
-const shortcut = require('electron-localshortcut');
 const path = require('path');
-const url = require('url');
-const mRPC = require('discord-rpc');
-const clientId = '670062286890729492';
-const clientSecret = '********************************'; //you really think I would hand it out?
-const rpc = new mRPC.Client({ transport: 'websocket' });
-
-var win = null, splash = null;
+const fs = require('fs');
+const shortcut = require('electron-localshortcut');
 
 app.commandLine.appendSwitch('disable-frame-rate-limit');
 app.commandLine.appendSwitch('disable-gpu-vsync');
@@ -35,22 +27,16 @@ if(os.cpus()[0].model.includes('AMD')) {
    app.commandLine.appendSwitch('enable-zero-copy');
 }
 
-Menu.setApplicationMenu(null);
+var win = null;
 
-function createGameWindow() {
-    const { width, height } = electron.screen.getPrimaryDisplay().workAreaSize;
+function createGameWindow(){
+	const { width, height } = electron.screen.getPrimaryDisplay().workAreaSize;
     win = new BrowserWindow({
         backgroundColor: '#000000',
-        show: false,
         webPreferences: {
-            nodeIntergration: false,
-            preload: path.join(__dirname, 'client.js')
+            nodeIntergration: true,
+            preload: path.join(__dirname, 'preload.js')
         }
-    });
-    win.once('ready-to-show', () => {
-        win.show();
-        splash.close();
-        splash = null;
     });
     win.webContents.on('new-window', (event, url, frameName, disposition, options) => {
         if(!url) return;
@@ -111,156 +97,14 @@ function createGameWindow() {
     ];
 
     Menu.setApplicationMenu(Menu.buildFromTemplate(template));
-    //win.webContents.openDevTools();
+    //win.webContents.openDevTools(); //uncomment this line to open dev console
     win.setSimpleFullScreen(true);
     
-    /*
-    let filter = {urls:[]}
-    try {fs.mkdir(swapFolder, { recursive: true }, e => {});}catch(e){};
-		win.webContents.session.webRequest.onBeforeRequest((details, callback) => {
-			
-			
-			
-			let tempP = path.join(swapFolder,details.url.replace(/(https|http)(:\/).+(krunker\.io)/gi,''))
-			console.log(tempP)
-			console.log(details.url)
-			
-			if(fs.existsSync(tempP)){
-				if(!(fs.statSync(tempP).isDirectory())){
-					console.log("EXISTS")
-					console.log("\n")
-					console.log(details.url)
-					if (!(/\.(html|js)/g.test(tempP))) {
-					callback({ cancel: false, redirectURL: url.format({
-								pathname: tempP,
-								protocol: 'file:',
-								slashes: true
-							}) || details.url});
-					}else{
-						callback({ cancel: false, redirectURL: details.url});
-					}
-				}else{
-					callback({ cancel: false, redirectURL: details.url});
-				}
-			}else{
-			
-				callback({ cancel: false, redirectURL: details.url});
-			}
-		});
-    */
-    let sf = path.join(app.getPath('documents'), '/GiantReasourceSwapper');
     
-    try {fs.mkdir(sf, { recursive: true }, e => {});}catch(e){};
-	let s = { fltr: { urls: [] }, fls: {} };
-	const afs = (dir, fileList = []) => {
-		fs.readdirSync(dir).forEach(file => {
-			const fp = path.join(dir, file);
-			if (fs.statSync(fp).isDirectory()) {
-				if (!(/\\(docs)$/.test(fp)))
-					afs(fp);
-			} else {
-				if (!(/\.(html|js)/g.test(file))) {
-					let k = '*://krunker.io' + fp.replace(sf, '').replace(/\\/g, '/') + '*';
-					s.fltr.urls.push(k);
-					console.log(fp)
-					s.fls[k.replace(/\*/g, '')] = url.format({
-						pathname: fp,
-						protocol: 'file:',
-						slashes: true
-					});
-				}
-			}
-		});
-	};
-	afs(sf);
-	if (s.fltr.urls.length) {
-		win.webContents.session.webRequest.onBeforeRequest(s.fltr, (details, callback) => {
-			callback({ cancel: false, redirectURL: s.fls[details.url.replace(/https|http|(\?.*)|(#.*)/gi, '')] || details.url });
-		});
-	}
-	
-	/*const filter = {
-		urls:['*://*.giantclient.epizy.com/*']
-	};
-	const session = electron.remote.session
-	session.defaultSession.webRequest.onBeforeSendHeaders(filter, (details, callback) => {
-                details.requestHeaders['Origin'] = null;
-                details.headers['Origin'] = null;
-                callback({ requestHeaders: details.requestHeaders })
-	});*/
-	
-    win.loadURL('https://krunker.io/');
-    rpc.login({ clientId }).catch(console.error);
-    win.webContents.on('did-finish-load', () => {
-        initRPC();
-    });
-    
-    
-    
-    
-    twitch();
-    ipcMain.on('updated', () => {
-        app.relaunch();
-        app.quit();
-    });
-    //literally taken from Krunker Client, if it aint broke don't fix it
-    
-	
-    
+    win.loadURL('https://krunker.io')
 }
 
-function initRPC() {
-    setInterval(setActivity, 15e3);
-    setTimeout(() => { setActivity(); }, 3000);
-
-    ipcMain.on('RPCSet', (event, arg) => {
-        if(!rpc) return;
-
-        rpc.setActivity(arg);
-    });
-
-	async function setActivity() {
-        try {
-            win.webContents.send('RPCGet');
-        } catch(err) {
-            console.error(err);
-        }        
-	}
+function init(){
+	createGameWindow();
 }
-
-function twitch() {
-    ipcMain.on('twitch', (event, arg1, arg2) => {
-        fs.writeFile(arg1, arg2, 'utf-8', function(err) {
-            if(err) return console.error(err);
-        });
-    });
-}
-
-function createSplash() {
-    splash = new BrowserWindow({
-        width: 700,
-        height: 300,
-        backgroundColor: '#000000',
-        center: true,
-        alwaysOnTop: true,
-        frame: false,
-        webPreferences: {
-            nodeIntergration: true
-        }
-    });
-    splash.loadFile('splash.html');
-    createGameWindow();
-}
-
-app.on('ready', createSplash);
-
-app.on('window-all-closed', () => {
-    app.quit();
-});
-
-app.on('quit', () => {
-    win = null;
-    splash = null;
-    rpc.destroy();
-    process.exit(0);
-});
+app.on('ready',init);
